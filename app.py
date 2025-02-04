@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, jsonify
 from llm_module import create_vector_store, generate_response
 import logging
+import os
 
 #app = Flask(__name__)
 #app = Flask(__name__, template_folder='D:/pythonProject/venv/templates')
@@ -12,6 +13,9 @@ vector_store = None  # Initialize global variable
 @app.route('/')
 def main():
     print("Main route accessed")
+    print("Current working directory:", os.getcwd())
+    print("Contents of current directory:", os.listdir())
+    print("Contents of templates directory:", os.listdir('templates'))
     return render_template('main.html')
 
 @app.route('/chatbot', methods=['GET'])
