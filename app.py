@@ -3,7 +3,8 @@ from llm_module import create_vector_store, generate_response
 import logging
 
 #app = Flask(__name__)
-app = Flask(__name__, template_folder='D:/pythonProject/venv/templates')
+#app = Flask(__name__, template_folder='D:/pythonProject/venv/templates')
+app = Flask(__name__, template_folder='/templates')
 logging.basicConfig(level=logging.DEBUG)  # Add logging
 
 vector_store = None  # Initialize global variable
