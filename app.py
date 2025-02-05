@@ -2,9 +2,16 @@ from flask import Flask, render_template, request, jsonify
 from llm_module import create_vector_store, generate_response
 import logging
 import os
+from dotenv import load_dotenv
+from flask_cors import CORS
 
+load_dotenv()
 app = Flask(__name__)
 logging.basicConfig(level=logging.DEBUG)  # Add logging
+
+CORS(app)
+
+app.config['DEBUG'] = os.environ.get('FLASK_DEBUG')
 
 vector_store = None  # Initialize global variable
 
@@ -47,4 +54,5 @@ def ask():
 if __name__ == '__main__':
     # Run the app on localhost with port 8081
     #app.run(host='127.0.0.1', port=8081, debug=True)
-    app.run(debug=True)
+    #app.run(debug=True)
+    app.run()
