@@ -45,7 +45,8 @@ def ask():
         question = request.form['question']
         if vector_store:
             response = generate_response(question, vector_store)
-            return jsonify({'response': response})  # Return JSON response
+            #return jsonify({'response': response})  # Return JSON response
+            return response
         return jsonify({'error': 'Vector store not initialized.'}), 400
     except Exception as e:
         logging.error(f"Error in ask route: {e}")

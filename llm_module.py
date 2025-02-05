@@ -84,8 +84,8 @@ def generate_response(question: str, vectorstore):
     # Initialize the ChatGroq model
     llm = ChatGroq(
         #model="llama3-groq-8b-8192-tool-use-preview",
-        #model="deepseek-r1-distill-llama-70b",
-        model="llama-3.3-70b-versatile",
+        model="deepseek-r1-distill-llama-70b",
+        #model="llama-3.3-70b-versatile",
         temperature=0,
         max_tokens=None,
         timeout=None,
