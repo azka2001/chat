@@ -46,5 +46,5 @@ def ask():
 
 if __name__ == '__main__':
     # Run the app on localhost with port 8081
-    app.run(host='127.0.0.1', port=8081, debug=True)
-    #app.run()
+    #app.run(host='127.0.0.1', port=8081, debug=True)
+    app.run(debug=True)
