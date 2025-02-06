@@ -8,7 +8,9 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
 import os
-
+from langchain.prompts import PromptTemplate
+from langchain_community.tools.tavily_search import TavilySearchResults
+from langchain_core.output_parsers import StrOutputParser
 
 def get_all_links(url: str) -> list:
     """
@@ -62,10 +64,9 @@ def create_vector_store(url: str):
 
     return vectorstore
 
-
 def generate_response(question: str, vectorstore):
     """
-    Generates a response to a question using the provided vector store.
+    Generates a response to a question using both a vector store and Tavily web search for retrieval augmentation.
 
     Args:
         question (str): The question to be answered.
@@ -74,18 +75,17 @@ def generate_response(question: str, vectorstore):
     Returns:
         str: The generated response to the question.
     """
-    from langchain.prompts import PromptTemplate
-    from langchain_core.output_parsers import StrOutputParser
 
-    # Set up the API key for the ChatGroq model
-    key = "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"
-    os.environ["GROQ_API_KEY"] = key.strip()
+    #Set API keys
+    groq = "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"
+    tavily = "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"
+    os.environ["GROQ_API_KEY"] = groq.strip()
+    os.environ["TAVILY_API_KEY"] = tavily.strip()
 
-    # Initialize the ChatGroq model
+        # Initialize the ChatGroq model
     llm = ChatGroq(
-        #model="llama3-groq-8b-8192-tool-use-preview",
-        model="deepseek-r1-distill-llama-70b",
-        #model="llama-3.3-70b-versatile",
+        #model="deepseek-r1-distill-llama-70b",
+        model="llama-3.3-70b-versatile",
         temperature=0,
         max_tokens=None,
         timeout=None,
@@ -93,31 +93,45 @@ def generate_response(question: str, vectorstore):
     )
 
     retriever = vectorstore.as_retriever()
+    tavily_search = TavilySearchResults(api_key=os.environ["TAVILY_API_KEY"])
 
-    # Define the prompt template
+    # Define the improved prompt template
     prompt = PromptTemplate(
-        template="""You are an expert assistant with deep knowledge in various domains. Your task is to accurately answer the question based on the provided context extracted from relevant documents. Follow these instructions:
-
-            1. **Understand the Question**: Carefully decode the user's question to grasp its intent.
-
-            2. **Use Context**: Refer to the provided context from the retrieved documents to form your answer. Ensure that your response is directly supported by the context.
-
-            3. **Concise Answer**: Provide a clear, concise answer in three sentences or less. If the context does not contain enough information to answer the question, state that you don't know the answer.
-
-            4. **Avoid Assumptions**: Do not infer or assume information that is not present in the context. Only rely on what is explicitly provided.
-
-            Question: {question}
-            Context: {context}
-            Answer:""",
+        template="""
+        You are an expert assistant with deep knowledge in various domains. Your task is to answer the question using the most relevant information from the provided **vectorstore context**. The **web search context** will only be used to supplement the vectorstore context when necessary. Ensure that the answer stays **relevant to the main vectorstore topic**.
+        
+        **Instructions:**
+        1. **Understand the Question**: Decode the user's query clearly and identify its intent.
+        2. **Use Context**: 
+           - Prioritize and base your answer on the **vectorstore context**.
+           - Use the **web search context** only to supplement the vectorstore context when it provides additional useful information.
+        3. **Concise & Accurate Answer**: Provide a clear, concise, and accurate response. Ensure factual correctness.
+        4. **If Conflicting Information Exists**: Prioritize information from the **vectorstore context**. If both sources provide conflicting info, give preference to the most authoritative or reliable source.
+        5. **Avoid Redundancy**: There's no need to mention where the information was sourced from (whether it was from the web search or vector store).
+        6. **Focus on the Main Topic**: ONLY respond to topics that are **directly related to the vectorstore context**. If the question does not align with the vectorstore context, JUST SAY: This topic is irrelevant. 
+        
+        **Question:** {question}
+        **Vector Store Context:** {vectorstore context}
+        **Web Search Context:** {web search context}
+        **Answer:**""",
         input_variables=["question", "context"],
     )
 
     # Create the RAG chain
     rag_chain = prompt | llm | StrOutputParser()
 
-    # Retrieve relevant documents and generate response
+    # Retrieve relevant documents from vectorstore
     docs = retriever.get_relevant_documents(question)
-    context = "\n\n".join([doc.page_content for doc in docs])
-    response = rag_chain.invoke({"question": question, "context": context})
+    vector_context = "\n\n".join([doc.page_content for doc in docs])
 
-    return response
+    # Perform Tavily Web Search
+    web_results = tavily_search.run(question)
+    web_context = "\n\n".join([result["content"] for result in web_results[:3]]) if web_results else ""
+
+    # Combine both sources of information
+    combined_context = f"**Vectorstore Context:**\n{vector_context}\n\n**Web Search Context:**\n{web_context}"
+
+    # Generate the response
+    response = rag_chain.invoke({"question": question, "vectorstore context": combined_context, "web search context":web_context})
+
+    return str(response)
