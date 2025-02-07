@@ -77,8 +77,8 @@ def generate_response(question: str, vectorstore):
     """
 
     #Set API keys
-    groq = "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"
-    tavily = "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"
+    groq = "ENTER API KEY"
+    tavily = "ENTER API KEY"
     os.environ["GROQ_API_KEY"] = groq.strip()
     os.environ["TAVILY_API_KEY"] = tavily.strip()
 
